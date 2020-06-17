@@ -100,7 +100,7 @@ void setup() {
       serializeJson(doc, Udp);
       //Udp.write(doc, capacity);
       Udp.endPacket();
-      delay(10);
+      delay(50);
 
       //__Check if it's enough________________
       int packetSize = Udp.parsePacket();
