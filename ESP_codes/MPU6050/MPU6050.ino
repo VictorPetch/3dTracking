@@ -88,9 +88,9 @@ void setup() {
       const size_t capacity = JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(1);
       DynamicJsonDocument doc(capacity);
       JsonArray A = doc.createNestedArray("A");
-      A.add(int(Ax*100));
-      A.add(int(Ay*100));
-      A.add(int(Az*100));
+      A.add(int(Ax*1000));
+      A.add(int(Ay*1000));
+      A.add(int(Az*1000));
       A.add(int(Gx));
       A.add(int(Gy));
       A.add(int(Gz));
@@ -100,7 +100,7 @@ void setup() {
       serializeJson(doc, Udp);
       //Udp.write(doc, capacity);
       Udp.endPacket();
-      delay(50);
+      delay(10);
 
       //__Check if it's enough________________
       int packetSize = Udp.parsePacket();
