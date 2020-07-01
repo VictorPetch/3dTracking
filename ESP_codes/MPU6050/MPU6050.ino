@@ -65,11 +65,14 @@ void setup() {
     if (len > 0) incomingPacket[len] = 0;
     Serial.printf("UDP packet contents: %s\n", incomingPacket);
     Serial.println("Sending registers contents");
+    char praler[] = "GO";
+    Serial.println(len);
+    Serial.println(incomingPacket);
+    Serial.println(praler);
     len = 0;
-    
     //__send back a reply________________
     //IPAddress host(192, 168, 1, 19);
-    while(len == 0){
+    while(strcmp(incomingPacket,"GO") == 0){
       //_____Read registers______________
       Read_RawValue(MPU6050SlaveAddress, MPU6050_REGISTER_ACCEL_XOUT_H);
       //divide each with their sensitivity scale factor
@@ -104,6 +107,7 @@ void setup() {
 
       //__Check if it's enough________________
       int packetSize = Udp.parsePacket();
+      Serial.println(packetSize);
       if (packetSize) {
         len = Udp.read(incomingPacket, 255);
         Serial.println("Stopped sending packets");
