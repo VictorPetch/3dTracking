@@ -1,6 +1,6 @@
 #____Uses the data received along with a trained model____
 import socket
-import time
+import time as t
 import simplejson as json
 import numpy as np
 import matplotlib.pyplot as plt
@@ -45,7 +45,7 @@ f = kalman_param()
 som = pickle.load( open( "../models/SOM_00.p", "rb" ))
 dataset = pd.read_csv('../models/markers_00.csv')
 markers = dataset.iloc[:].values
-SOM_size = 25
+SOM_size = 8
 print('Load model OK')
 
 #____UDP Socket____
@@ -78,20 +78,36 @@ try:
             K_Ax.append(f.x[0]*9.8)
             K_Ay.append(f.x[1]*9.8)
             K_Az.append(f.x[2]*9.8)
-        except Exception as e:
+        except:
             pass
+            
+            
 
         #____When window is full____
-        window_len = 20
+        window_len = 30
         step = 5
         if(len(K_Ax) == window_len):
-            data = np.concatenate((K_Ax,K_Ay,K_Az),axis = 1) 
+
+            #____Send another packet to stop____
+            #bytesToSend = str.encode('STOP')
+            #UDPClientSocket.sendto(bytesToSend, serverAddressPort)
+
+            timer = t.time()
+            Gx_new = np.asarray(Gx).reshape(-1,1) #Add column dimension
+            Gy_new = np.asarray(Gy).reshape(-1,1)
+            Gz_new = np.asarray(Gz).reshape(-1,1)
+            data = np.concatenate((K_Ax,K_Ay,K_Az,Gx_new,Gy_new,Gz_new),axis = 1) 
             data = data.reshape(1,-1)
             w = som.winner(data)
             print(w)
-            #print('Class: ',markers[w[0]*(SOM_size-1) + w[1] + 1][3])
-            if(markers[w[0]*(SOM_size-1) + w[1] + 1][3] == '1'):
-                print('ONE PUNCH')
+            #print('Class: ',markers[w[0]*(SOM_size-1) + w[1] + 1][2:])
+            if(markers[w[0]*(SOM_size-1) + w[1] + 1][2:].sum() == 1):
+                if(markers[w[0]*(SOM_size-1) + w[1] + 1][2] == 1):
+                    print('NADA ROLANDO')
+                if(markers[w[0]*(SOM_size-1) + w[1] + 1][3] == 1):
+                    print('ONE PUNCH')
+                if(markers[w[0]*(SOM_size-1) + w[1] + 1][4] == 1):
+                    print('SHORYUKEN')
 
             #___Removing 5 samples____
             K_Ax = K_Ax[step:]
@@ -103,17 +119,12 @@ try:
             Gx = Gx[step:]
             Gy = Gy[step:]
             Gz = Gz[step:]
-
-            #analiza janela
-            #lembrar do scaler
-            #descarta os primeiros 5
-
-
-
+            #print('time: ', t.time() - timer)
+            
 except Exception as e:
     print('Raised exception:')
     print(e)
     print(traceback.format_exc())
+finally:
     bytesToSend = str.encode('STOP')
-    UDPClientSocket.sendto(bytesToSend, serverAddressPort)
-    exit()      
+    UDPClientSocket.sendto(bytesToSend, serverAddressPort)      

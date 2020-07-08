@@ -65,10 +65,7 @@ void setup() {
     if (len > 0) incomingPacket[len] = 0;
     Serial.printf("UDP packet contents: %s\n", incomingPacket);
     Serial.println("Sending registers contents");
-    char praler[] = "GO";
     Serial.println(len);
-    Serial.println(incomingPacket);
-    Serial.println(praler);
     len = 0;
     //__send back a reply________________
     //IPAddress host(192, 168, 1, 19);
@@ -85,7 +82,8 @@ void setup() {
       T = (double)Temperature/340+36.53; //temperature formula
       //msg = String(Ax)+','+String(Ay)+','+String(Az)+','+
       //      String(Gx)+','+String(Gy)+','+String(Gz);
-      Serial.print(T);Serial.print(" | ");Serial.println(Ay,2);
+      Serial.print(T);Serial.print(" | ");Serial.print(Ax,2);
+      Serial.print(Ay,2);Serial.println(Az,2);
       
       //____Serialize into json_______________
       const size_t capacity = JSON_ARRAY_SIZE(6) + JSON_OBJECT_SIZE(1);

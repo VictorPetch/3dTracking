@@ -25,7 +25,7 @@ img_iter = 0
 destination = "../CSV/sensor.csv"
 filesize = os.path.getsize(destination)
 if filesize == 0:
-    df = pd.DataFrame(columns=['K_Ax', 'K_Ay', 'K_Az','class'])
+    df = pd.DataFrame(columns=['K_Ax', 'K_Ay', 'K_Az','Gx','Gy','Gz','class'])
     df.to_csv(df.to_csv(destination,mode='a', index=False))
 
 #____UDP Socket____
@@ -67,46 +67,6 @@ f = kalman_param()
 
 try:
     while True: 
-        '''
-        input('Press enter do calibrate')
-        #____Send First Packet____
-        bytesToSend = str.encode('GO')
-        UDPClientSocket.sendto(bytesToSend, serverAddressPort)
-        print("sent msg to server")
-        starttime = time.time()
-
-        #____Calibrate sensor____
-        print('calibrating')
-        
-        while True:
-            try:
-                #____Receive data____
-                msgFromServer = UDPClientSocket.recvfrom(bufferSize)
-                biscoito = json.loads(str(msgFromServer[0], 'utf-8'))
-                Ax.append(biscoito['A'][0]/1000.0) 
-                Ay.append(biscoito['A'][1]/1000.0)
-                Az.append(biscoito['A'][2]/1000.0)
-                Gx.append(biscoito['A'][3])
-                Gy.append(biscoito['A'][4])
-                Gz.append(biscoito['A'][5])
-                
-                if(len(Ax) == 100):
-                    media_X = np.mean(Ax)
-                    media_Y = np.mean(Ay)
-                    media_Z = np.mean(Az)
-                    Ax,Ay,Az = [],[],[]
-                    Gx,Gy,Gz = [],[],[]
-                    break
-            except:
-                pass
-
-        #____Stop sending____
-        bytesToSend = str.encode('STOP')
-        UDPClientSocket.sendto(bytesToSend, serverAddressPort)
-        print('done')
-        time.sleep(1)
-        '''
-        deltaT = 0.01
         input('Press enter to collect data')
         print('collecting data')
         bytesToSend = str.encode('GO')
@@ -122,7 +82,7 @@ try:
                 Gx.append(biscoito['A'][3])
                 Gy.append(biscoito['A'][4])
                 Gz.append(biscoito['A'][5])
-                print(Ax[-1],' | ',Ay[-1], ' | ', Az[-1])
+                print(Ax[-1],' | ',Ay[-1], ' | ',Az[-1],' | ',Gx[-1],' | ',Gy[-1],' | ',Gz[-1])
                 
                 #____Kalman____
                 f.predict() #x,P
@@ -139,44 +99,20 @@ try:
             
 
             #____Populating the plot____
-            num_points = 50
+            num_points = 20
             anterior = 0
             classe = 1
-            if(len(Ax) == num_points):
-                for point in range(num_points-1):
-                    #____Integrate data____
-                    Vx.append(Vx[-1] + (K_Ax[point+1] + K_Ax[point]) * deltaT/2.0)
-                    Vy.append(Vy[-1] + (K_Ay[point] + K_Ay[anterior]) * deltaT/2.0)# 
-                    Vz.append(Vz[-1] + (K_Az[point] + K_Az[anterior]) * deltaT/2.0)# 
-                    Sx.append(Sx[-1] + Vx[-2]*deltaT + (K_Ax[-2] + K_Ax[-1])/4.0 *(deltaT**2))
-                    Sy.append(Sy[-1] + Vy[-2]*deltaT + (K_Ay[-2] + K_Ay[-1])/4.0 *(deltaT**2))
-                    Sz.append(Sz[-1] + Vz[-2]*deltaT + (K_Az[-2] + K_Az[-1])/4.0 *(deltaT**2))
-                #print('Vx: ', Vx)
-                '''
-                #____Saving the figure____
-                #plt.figure()
-                #plot_data(num_points,Ax,Ay,Az,0,(-2,2))
-                #plt.plot(np.linspace(0,num_points,num_points),K_Ax)
-                #plt.axis([0,num_points,-2*9.8,2*9.8])
-                #plot_data(num_points,K_Ax,K_Ay,K_Az,0,(-2*9.8,2*9.8))
-                #plt.plot(np.linspace(0,num_points,num_points),Vx)
-                #plt.axis([0,num_points,-1,1])
-                #plt.figure()
-                #plt.plot(np.linspace(0,num_points,num_points),Sx)
-                #plt.axis([0,num_points,-0.1,0.1])
-                #plot_data(num_points,Gx,Gy,Gz,412,(0,260))
-                #plot_data(num_points,Vx,Vy,Vz,212,(-1,1))
-                #plot_data(num_points,Sx,Sy,Sz,414,(-0.1,0.1))
-                #plt.figure()
-                #plt.savefig('../plots/SensorData' + str(img_iter))
-                #plt.show()
-                '''
+
+            if(len(Ax) == num_points):   
                 print('Saving sensor data')
                 #____Saving csv____
                 K_Ax = np.asarray(K_Ax)
                 K_Ay = np.asarray(K_Ay)
                 K_Az = np.asarray(K_Az)
-                sensorData = np.concatenate ((K_Ax,K_Ay,K_Az,np.ones((len(K_Ax),1))*classe),axis = 1)
+                Gx = np.asarray(Gx).reshape(-1,1)
+                Gy = np.asarray(Gy).reshape(-1,1)
+                Gz = np.asarray(Gz).reshape(-1,1)
+                sensorData = np.concatenate ((K_Ax,K_Ay,K_Az,Gx,Gy,Gz,np.ones((len(K_Ax),1))*classe),axis = 1)
                 print(sensorData.shape)
                 df = pd.DataFrame(sensorData)
                 df.to_csv(df.to_csv(destination,mode='a', index=False,header=False))
@@ -206,12 +142,76 @@ except Exception as e:
     exit()   
 
 #____Anotações____
-'''
-#____FFT data____
-N = num_points
-yf = np.abs(scipy.fft.fft(np.asarray(Ay)))
-xf = np.linspace(0.0, int(100/2), num_points//2)
-plt.figure()
-plt.plot(xf,2.0/num_points*yf[0:N//2])
-plt.show()
-'''
+    '''
+    #____FFT data____
+    N = num_points
+    yf = np.abs(scipy.fft.fft(np.asarray(Ay)))
+    xf = np.linspace(0.0, int(100/2), num_points//2)
+    plt.figure()
+    plt.plot(xf,2.0/num_points*yf[0:N//2])
+    plt.show()
+
+    for point in range(num_points-1):
+        deltaT = 0.01
+        #____Integrate data____
+        Vx.append(Vx[-1] + (K_Ax[point+1] + K_Ax[point]) * deltaT/2.0)
+        Vy.append(Vy[-1] + (K_Ay[point] + K_Ay[anterior]) * deltaT/2.0)# 
+        Vz.append(Vz[-1] + (K_Az[point] + K_Az[anterior]) * deltaT/2.0)# 
+        Sx.append(Sx[-1] + Vx[-2]*deltaT + (K_Ax[-2] + K_Ax[-1])/4.0 *(deltaT**2))
+        Sy.append(Sy[-1] + Vy[-2]*deltaT + (K_Ay[-2] + K_Ay[-1])/4.0 *(deltaT**2))
+        Sz.append(Sz[-1] + Vz[-2]*deltaT + (K_Az[-2] + K_Az[-1])/4.0 *(deltaT**2))
+        
+    #____Saving the figure____
+    #plt.figure()
+    #plot_data(num_points,Ax,Ay,Az,0,(-2,2))
+    #plt.plot(np.linspace(0,num_points,num_points),K_Ax)
+    #plt.axis([0,num_points,-2*9.8,2*9.8])
+    #plot_data(num_points,K_Ax,K_Ay,K_Az,0,(-2*9.8,2*9.8))
+    #plt.plot(np.linspace(0,num_points,num_points),Vx)
+    #plt.axis([0,num_points,-1,1])
+    #plt.figure()
+    #plt.plot(np.linspace(0,num_points,num_points),Sx)
+    #plt.axis([0,num_points,-0.1,0.1])
+    #plot_data(num_points,Gx,Gy,Gz,412,(0,260))
+    #plot_data(num_points,Vx,Vy,Vz,212,(-1,1))
+    #plot_data(num_points,Sx,Sy,Sz,414,(-0.1,0.1))
+    #plt.figure()
+    #plt.savefig('../plots/SensorData' + str(img_iter))
+    #plt.show()
+    
+    input('Press enter do calibrate')
+    #____Send First Packet____
+    bytesToSend = str.encode('GO')
+    UDPClientSocket.sendto(bytesToSend, serverAddressPort)
+    print("sent msg to server")
+    starttime = time.time()
+    #____Calibrate sensor____
+    print('calibrating')
+    
+    while True:
+        try:
+            #____Receive data____
+            msgFromServer = UDPClientSocket.recvfrom(bufferSize)
+            biscoito = json.loads(str(msgFromServer[0], 'utf-8'))
+            Ax.append(biscoito['A'][0]/1000.0) 
+            Ay.append(biscoito['A'][1]/1000.0)
+            Az.append(biscoito['A'][2]/1000.0)
+            Gx.append(biscoito['A'][3])
+            Gy.append(biscoito['A'][4])
+            Gz.append(biscoito['A'][5])
+            
+            if(len(Ax) == 100):
+                media_X = np.mean(Ax)
+                media_Y = np.mean(Ay)
+                media_Z = np.mean(Az)
+                Ax,Ay,Az = [],[],[]
+                Gx,Gy,Gz = [],[],[]
+                break
+        except:
+            pass
+    #____Stop sending____
+    bytesToSend = str.encode('STOP')
+    UDPClientSocket.sendto(bytesToSend, serverAddressPort)
+    print('done')
+    time.sleep(1)
+    '''
