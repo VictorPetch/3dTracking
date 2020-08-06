@@ -69,15 +69,6 @@ try:
             Gy.append(biscoito['A'][4])        
             Gz.append(biscoito['A'][5])
             #print(Ax[-1],' | ',Ay[-1], ' | ', Az[-1])
-            
-            #____Kalman____
-            f.predict() #x,P
-            f.update([[Ax[-1]], #X,P
-                    [Ay[-1]],
-                    [Az[-1]]])
-            K_Ax.append(f.x[0]*9.8)
-            K_Ay.append(f.x[1]*9.8)
-            K_Az.append(f.x[2]*9.8)
         except:
             pass
             
@@ -128,3 +119,14 @@ except Exception as e:
 finally:
     bytesToSend = str.encode('STOP')
     UDPClientSocket.sendto(bytesToSend, serverAddressPort)      
+
+
+#____Draft____
+            '''#____Kalman____
+            f.predict() #x,P
+            f.update([[Ax[-1]], #X,P
+                    [Ay[-1]],
+                    [Az[-1]]])
+            K_Ax.append(f.x[0]*9.8)
+            K_Ay.append(f.x[1]*9.8)
+            K_Az.append(f.x[2]*9.8)'''

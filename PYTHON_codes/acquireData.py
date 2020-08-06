@@ -10,6 +10,7 @@ from filterpy.common import Q_discrete_white_noise
 import csv
 import pandas as pd
 import os
+import traceback
 
 #____Variables____
 serverAddressPort   = ("192.168.1.39", 4242)
@@ -25,7 +26,7 @@ img_iter = 0
 destination = "../CSV/sensor.csv"
 filesize = os.path.getsize(destination)
 if filesize == 0:
-    df = pd.DataFrame(columns=['K_Ax', 'K_Ay', 'K_Az','Gx','Gy','Gz','class'])
+    df = pd.DataFrame(columns=['Ax', 'Ay', 'Az','Gx','Gy','Gz','class'])
     df.to_csv(df.to_csv(destination,mode='a', index=False))
 
 #____UDP Socket____
@@ -83,36 +84,47 @@ try:
                 Gy.append(biscoito['A'][4])
                 Gz.append(biscoito['A'][5])
                 print(Ax[-1],' | ',Ay[-1], ' | ',Az[-1],' | ',Gx[-1],' | ',Gy[-1],' | ',Gz[-1])
-                
-                #____Kalman____
-                f.predict() #x,P
-                f.update([[Ax[-1]], #X,P
-                        [Ay[-1]],
-                        [Az[-1]]])
-                K_Ax.append(f.x[0]*9.8)
-                K_Ay.append(f.x[1]*9.8)
-                K_Az.append(f.x[2]*9.8)
+
                 print('Ax:', len(Ax))
             except Exception as e:
                 pass
-            
-            
 
             #____Populating the plot____
-            num_points = 20
-            anterior = 0
-            classe = 1
+            num_points = 100
+            classe = 2
 
             if(len(Ax) == num_points):   
+                #____Send another packet to stop____
+                bytesToSend = str.encode('STOP')
+                UDPClientSocket.sendto(bytesToSend, serverAddressPort)
+
                 print('Saving sensor data')
+                #____Plotting data____
+                plt.figure()
+                plot_data(num_points,Ax,Ay,Az,211,(-2,2))
+                plot_data(num_points,Gx,Gy,Gz,212,(-250,250))
+                plt.show()
+
+                #____Movement activity detector____
+                windows = input('Choose number of windows: ')
+                for i in range(windows):
+                    
+                print('Choose the window to consider in sample number')
+                sample_from = int(input('Sample start (int 1): '))
+                sample_to = int(input('Sample finish (int 2): '))
+                if(sample_from - sample_to == 0):
+                    print('Choose a window with more than 0 samples')
+                    break
+
                 #____Saving csv____
-                K_Ax = np.asarray(K_Ax)
-                K_Ay = np.asarray(K_Ay)
-                K_Az = np.asarray(K_Az)
-                Gx = np.asarray(Gx).reshape(-1,1)
-                Gy = np.asarray(Gy).reshape(-1,1)
-                Gz = np.asarray(Gz).reshape(-1,1)
-                sensorData = np.concatenate ((K_Ax,K_Ay,K_Az,Gx,Gy,Gz,np.ones((len(K_Ax),1))*classe),axis = 1)
+                Ax_arr = np.asarray(Ax[sample_from:sample_to]).reshape(-1,1)
+                Ay_arr = np.asarray(Ay[sample_from:sample_to]).reshape(-1,1)
+                Az_arr = np.asarray(Az[sample_from:sample_to]).reshape(-1,1)
+                Gx_arr = np.asarray(Gx[sample_from:sample_to]).reshape(-1,1)
+                Gy_arr = np.asarray(Gy[sample_from:sample_to]).reshape(-1,1)
+                Gz_arr = np.asarray(Gz[sample_from:sample_to]).reshape(-1,1)
+                sensorData = np.concatenate ((Ax_arr,Ay_arr,Az_arr,Gx_arr,Gy_arr,Gz_arr,
+                                              np.ones((len(Ax_arr),1))*classe),axis = 1)
                 print(sensorData.shape)
                 df = pd.DataFrame(sensorData)
                 df.to_csv(df.to_csv(destination,mode='a', index=False,header=False))
@@ -122,10 +134,6 @@ try:
                 Gx,Gy,Gz = [],[],[]
                 K_Ax,K_Ay,K_Az = [],[],[] 
                 img_iter +=1
-
-                #____Send another packet to stop____
-                bytesToSend = str.encode('STOP')
-                UDPClientSocket.sendto(bytesToSend, serverAddressPort)
 
                 #____Get remaining packets____
                 try:
@@ -137,12 +145,22 @@ try:
 except Exception as e:
     print('Raised exception:')
     print(e)
+    print(traceback.format_exc())
     bytesToSend = str.encode('STOP')
     UDPClientSocket.sendto(bytesToSend, serverAddressPort)
     exit()   
 
 #____Anotações____
     '''
+    #____Kalman____
+    f.predict() #x,P
+    f.update([[Ax[-1]], #X,P
+            [Ay[-1]],
+            [Az[-1]]])
+    K_Ax = np.append(K_Ax,f.x[0]*9.8)
+    K_Ay = np.append(K_Ay,f.y[0]*9.8)
+    K_Az = np.append(K_Az,f.z[0]*9.8)
+    
     #____FFT data____
     N = num_points
     yf = np.abs(scipy.fft.fft(np.asarray(Ay)))
